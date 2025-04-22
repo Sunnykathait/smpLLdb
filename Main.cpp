@@ -76,7 +76,92 @@ class DDL{
         }
 };
 
-// to work on this from , insert:<tableName>{item1/null,item2/null,item3,null,..... so on}
+
+// everything related to showing the table either with where clause or not.
+class OnScreenTable{
+    private:
+        std::string tableName;
+        int index;
+        std::string command;
+
+    public:
+        OnScreenTable(std::string _command, int _index){
+            this->command = _command;
+            this->index = _index;
+        }   
+
+        void extractTableName(){
+            std::string _tableName = "";
+            char ch;
+            while(command[index] == ' ') index++;
+            while(command[index] != '<' && command[index] != '.'){
+                ch = command[index];
+                _tableName.push_back(ch);
+                index++; 
+            }
+            index++;
+            tableName = _tableName;
+            
+        }
+
+        // to continue from here.
+        void runAppMethod(){  //run appropriate method (runAppMethod)
+            extractTableName();
+            std::cout<<tableName<<std::endl;
+            while(index < command.length() && command[index] != '.' && command[index] != '<'){
+               index++;
+            }
+            if(command[index] == '<'){
+                index++;
+                showTableWithWhere();
+
+            }else{
+                ShowTable();
+            }
+        }
+
+        // command to show the full table.
+        void ShowTable(){
+            allTable.showtableDT(tableName);
+        }
+
+        // command to show the table with expected rows .
+        void showTableWithWhere(){
+            std::cout<<"\nwith where clause "<<tableName<<std::endl;
+            std::vector<std::pair<std::string,std::string>> showInfo;
+            std::string columnName = "", data= "";
+            
+            while(command[index] != '>'){
+                while(command[index] == ' ') index++;
+                while(command[index] != '='){
+                    columnName += command[index];
+                    index++;
+                }
+                index++;
+                while (command[index] != ',' || command[index] != '>')
+                {
+                    data += command[index];
+                    index++;
+                }
+
+                showInfo.push_back({columnName,data});
+
+                if(command[index] == '>'){
+                    break;
+                }
+            }
+
+            std::cout<<" The information the user want to see from the database is : "<<std::endl;
+            for ( std::pair<std::string,std::string> pr : showInfo)
+            {
+                std::cout<<pr.first<<" "<<pr.second<<" | ";
+            }
+            
+        }
+
+};
+
+
 class DML{
     std::string tableName;
     std::string command;
@@ -137,7 +222,7 @@ class DML{
 
 };
 
-void Analyzer(const std::string& command, bool& isDDL, bool& isDML, bool& isDEL, int& _index){
+void Analyzer(const std::string command, bool& isDDL, bool& isDML, bool& isDEL, int& _index){
     int index = 0, tempIndex = 0;
     std::string temp;
     while(command[index] != ':' && command[index] != '\n'){
@@ -145,11 +230,12 @@ void Analyzer(const std::string& command, bool& isDDL, bool& isDML, bool& isDEL,
             index++;
             continue;
         }
-        temp.push_back( command[index]);
+        temp.push_back(command[index]);
         index++;
         tempIndex++;
     }
 
+    // watch over Show command ....
     _index = ++index;
 
     if(command[index] == '\n'){
@@ -185,7 +271,9 @@ int main(){
 
         if(command == "exit") break;
         
+        // std::cout<<command<<" "<<index<<" ";
         Analyzer(command, isDDL, isDML, isDEL, index);
+        
 
         if(isDDL){
            
@@ -197,8 +285,11 @@ int main(){
             
             dml.executeDML();
         }else if(isDEL){
-            allTable.showtableDT(_tableNameForDEL);
+            OnScreenTable OnST(command,index);
+            OnST.runAppMethod();
+            
         }
+        command = "";
     }
 
     return 0;
